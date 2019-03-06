@@ -1,0 +1,26 @@
+<annotation>
+	<folder>image</folder>
+	<filename>frame000116.jpg</filename>
+	<path>/home/alex/subt_docker/SSD/toolbox/image/frame000116.jpg</path>
+	<source>
+		<database>Unknown</database>
+	</source>
+	<size>
+		<width>640</width>
+		<height>480</height>
+		<depth>3</depth>
+	</size>
+	<segmented>0</segmented>
+	<object>
+		<name>toolbox</name>
+		<pose>Unspecified</pose>
+		<truncated>1</truncated>
+		<difficult>0</difficult>
+		<bndbox>
+			<xmin>437</xmin>
+			<ymin>152</ymin>
+			<xmax>640</xmax>
+			<ymax>404</ymax>
+		</bndbox>
+	</object>
+</annotation>
