@@ -1,0 +1,8 @@
+prefix=/home/andyser/code/subt_related/subt_arti_searching/catkin_ws/install
+
+Name: bb_pointnet
+Description: Description of bb_pointnet
+Version: 0.0.0
+Cflags: -I/home/andyser/code/subt_related/subt_arti_searching/catkin_ws/install/include
+Libs: -L/home/andyser/code/subt_related/subt_arti_searching/catkin_ws/install/lib 
+Requires: 

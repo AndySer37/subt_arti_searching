@@ -52,7 +52,7 @@ class InstanceSeg(nn.Module):
         out = F.relu(self.conv6(out)) # (shape: (batch_size, 512, num_points))
         out = F.relu(self.conv7(out)) # (shape: (batch_size, 256, num_points))
         out = F.relu(self.conv7_2(out)) # (shape: (batch_size, 256, num_points))
-        out = F.relu(self.conv7_3(out)) # (shape: (batch_size, 256, num_points))
+        out = F.relu(self.conv7(out)) # (shape: (batch_size, 256, num_points))
         out = F.relu(self.conv8(out)) # (shape: (batch_size, 128, num_points))
         out = F.relu(self.conv9(out)) # (shape: (batch_size, 128, num_points))
 

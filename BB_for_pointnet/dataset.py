@@ -3,14 +3,20 @@ import pcl
 import torch
 import torch.utils.data
 import pandas as pd
-import os
+import os.path as osp
 import pickle
+if '/opt/ros/kinetic/lib/python2.7/dist-packages' in sys.path:
+    sys.path.remove('/opt/ros/kinetic/lib/python2.7/dist-packages')
+import cv2
 import numpy as np
 import math
-
+if sys.version_info[0] == 2:
+    import xml.etree.cElementTree as ET
+else:
+    import xml.etree.ElementTree as ET
 subt_CLASSES =  [  # always index 0
     'bb_extinguisher']
-
+HOME = osp.expanduser("~")
 # note: if you used our download scripts, this should be right
 subt_ROOT = osp.join(HOME, "data/subt_real/")
 
@@ -67,8 +73,10 @@ class subtAnnotationTransform(object):
                 bndbox = []
                 for polygon in polygons.iter('pt'):
                     # scale height or width
-                    x.append(int(polygon.find('x').text) / width)
-                    y.append(int(polygon.find('y').text) / height)
+                    #x.append(int(polygon.find('x').text) / width)
+                    #y.append(int(polygon.find('y').text) / height)
+                    x.append(int(polygon.find('x').text))
+                    y.append(int(polygon.find('y').text))               
                 bndbox.append(min(x))
                 bndbox.append(min(y))
                 bndbox.append(max(x))
@@ -89,7 +97,6 @@ class InstanceSeg_Dataset(torch.utils.data.Dataset):
 
         self.num_point = num_point
         self.root = data_path
-
         self.transform = transform
         self.target_transform = target_transform
         self.name = dataset_name
@@ -105,29 +112,50 @@ class InstanceSeg_Dataset(torch.utils.data.Dataset):
 
 
     def __getitem__(self, index):
-
+        
         im, mask, depth, gt, h, w, img_id = self.pull_item(index)
+        lower_bound = -5
+        upper_bound = 15
+        
         gt = gt[0]
+        x_bb = gt[3] - gt[1]
+        y_bb = gt[2] - gt[0]
+        _min = min(x_bb, y_bb)
+        if _min < 5:
+            lower_bound = 0
+        bonus = np.random.random_integers(lower_bound, upper_bound, 1)
+
         point = list()
         label = list()
+        origin = list()
+
+        for i in range(len(gt)):
+            gt[i] += 20
+
         for i in range(h):
             for j in range(w):
-                if gt[0] <= i <= gt[2] and gt[1] <= j <= gt[3]:
+                if gt[0] - bonus <= j <= gt[2] + bonus and gt[1] - bonus <= i <= gt[3] + bonus:
                     z = depth[i,j]
-                    x, y, z = self.getXYZ(j,i,z)
-                    point.append([z,-y,-x])
-                    label.append([mask[i,j]])
+                    if z > 1:
+                        x, y, z = self.getXYZ(j,i,z/1000.)
+                        point.append([z,-y,-x])
+                        (r,g,b) = im[i,j]
+                        origin.append([z,-y,-x,r,g,b])
+                        label.append([mask[i,j]/255])
         point = np.asarray(point, dtype = np.float32)
+        label = np.asarray(label, dtype = np.float32)
+        origin = np.asarray(origin, dtype = np.float32)
+        print point.shape[0]
 
-        if point_np.shape[0] < self.num_point:
-            row_idx = np.random.choice(point_np.shape[0], self.num_point, replace=True)
+        if point.shape[0] < self.num_point:
+            row_idx = np.random.choice(point.shape[0], self.num_point, replace=True)
         else:
-            row_idx = np.random.choice(point_np.shape[0], self.num_point, replace=False)        
+            row_idx = np.random.choice(point.shape[0], self.num_point, replace=False)        
 
 
-        point_out = torch.from_numpy(point_np[row_idx,:3])  	## need to revise
-        label = label[row_idx,3]			## need to revise
-
+        point_out = torch.from_numpy(point[row_idx,:3])  	## need to revise
+        origin = origin[row_idx]
+        label = label[row_idx]			## need to revise
         target = torch.zeros((self.num_point,2))
         # #target = torch.zeros((self.num_point), dtype = torch.long)
         for i in range(self.num_point):
@@ -136,26 +164,24 @@ class InstanceSeg_Dataset(torch.utils.data.Dataset):
             target[i][int(label[i])] = 1
         point_out = np.transpose(point_out, (1, 0))
 
-        out = {'x': point_out, 'y': target, 'id': img_id}
+        out = {'x': point_out, 'y': target, 'id': img_id, 'origin': origin}
         return out
 
 
     def __len__(self):
-        return len(self.data)
+        return len(self.ids)
 
     def pull_item(self, index):
         img_id = self.ids[index]
-
         target = ET.parse(self._annopath % img_id).getroot()
-        img = cv2.imread(self._imgpath % img_id)
-        depth = cv2.imread(self._depthpath % img_id)
-        mask = cv2.imread(self._maskpath % img_id)
+        img = cv2.imread(self._imgpath % img_id,cv2.IMREAD_UNCHANGED)
+        depth = cv2.imread(self._depthpath % img_id,cv2.IMREAD_UNCHANGED)
+        mask = cv2.imread(self._maskpath % img_id,cv2.IMREAD_UNCHANGED)
         height, width, channels = img.shape
-
+        
         if self.target_transform is not None:
             ### targe = [[xmin, ymin, xmax, ymax, label_ind], ... ]
             target = self.target_transform(target, width, height)
-
         if self.transform is not None:
             target = np.array(target)
             img, boxes, labels = self.transform(img, target[:, :4], target[:, 4])

@@ -15,20 +15,18 @@ import pcl
 num_epochs = 10
 batch_size = 1
 learning_rate = 0.001
-num_points = 150000
+num_points = 100000
 #network = PointNetDenseCls(k = 2)  #(num_points = num_points)
 network = InstanceSeg(num_points = num_points)
 network = network.cuda()
 
-test_dataset = InstanceSeg_Dataset(data_path="/home/andyser/data/subt_real",type="train",num_point = num_points)
+test_dataset = InstanceSeg_Dataset(data_path="/home/andyser/data/subt_real",type="val",num_point = num_points)
 test_loader = torch.utils.data.DataLoader(dataset=test_dataset,
                                            batch_size=1, shuffle=True,
                                            num_workers=16)
 
 
-
-
-state_dict = torch.load("./save.pkl")
+state_dict = torch.load("./weights/pointnet_epoch_5.pkl")
 network.load_state_dict(state_dict)
 dataiter = iter(test_loader)
 network.eval()

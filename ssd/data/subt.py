@@ -13,7 +13,6 @@ import torch.utils.data as data
 if '/opt/ros/kinetic/lib/python2.7/dist-packages' in sys.path:
     sys.path.remove('/opt/ros/kinetic/lib/python2.7/dist-packages')
 import cv2
-import cv2
 import numpy as np
 if sys.version_info[0] == 2:
     import xml.etree.cElementTree as ET
