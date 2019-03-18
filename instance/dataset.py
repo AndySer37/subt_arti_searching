@@ -1,91 +1,94 @@
 import sys
-
+import pcl
 import torch
 import torch.utils.data
-
+import pandas as pd
 import os
 import pickle
 import numpy as np
 import math
 
-subt_CLASSES = ('toolbox','backpack','radio')
+subt_CLASSES = ('extinguisher','backpack','radio')
 
-class Transform(object):
-
-    def __init__(self, class_to_ind=None, keep_difficult=False):
-        self.class_to_ind = class_to_ind or dict(
-            zip(subt_CLASSES, range(len(subt_CLASSES))))
-        self.keep_difficult = keep_difficult
-    def __call__(self, target, width, height):
-
-        res = []
-        for obj in target.iter('object'):
-            difficult = int(obj.find('difficult').text) == 1
-            if not self.keep_difficult and difficult:
-                continue
-            name = obj.find('name').text.lower().strip()
-            bbox = obj.find('bndbox')
-
-            pts = ['xmin', 'ymin', 'xmax', 'ymax']
-            bndbox = []
-            for i, pt in enumerate(pts):
-                cur_pt = int(bbox.find(pt).text) - 1
-                # scale height or width
-                cur_pt = cur_pt / width if i % 2 == 0 else cur_pt / height
-                bndbox.append(cur_pt)
-            label_idx = self.class_to_ind[name]
-            bndbox.append(label_idx)
-            res += [bndbox]  # [xmin, ymin, xmax, ymax, label_ind]
-            # img_id = target.find('filename').text[:-4]
-        #print(res)
-        return res  # [[xmin, ymin, xmax, ymax, label_ind], ... ]
 
 
 class InstanceSeg_Dataset(torch.utils.data.Dataset):
-    def __init__(self, data_path, type,image_sets=[('2007', 'train')],
-                 transform=None, target_transform=subtAnnotationTransform(),
-                 dataset_name='subt'):
-        
+    def __init__(self, data_path, type, num_point,dataset_name='subt'):
+        self.num_point = num_point
         self.root = data_path
         self.img_dir = self.root + "/image/"
-        self.point_dir = self.root + "/point/"
-        self.label = self.root + "/" + type + ".txt"
-
-        
-        self.image_set = image_sets
-        self.transform = transform
-        self.target_transform = target_transform
-        self.name = dataset_name
-        self._annopath = osp.join('%s', 'Annotations', '%s.xml')
-        self._imgpath = osp.join('%s', 'JPEGImages', '%s.jpg')
-        self.ids = list()
-        for (year, name) in image_sets:
-            rootpath = osp.join(self.root, 'subt')
-            for line in open(osp.join(rootpath, 'ImageSets', 'Main', name + '.txt')):
-                self.ids.append((rootpath, line.strip()))
-        self.num_examples = len(self.ids)
+        self.point_dir = self.root + "/pc/"
+        self.label = self.root + "/" + type + ".csv"
+        self.data  = pd.read_csv(self.label)
 
     def __getitem__(self, index):
-        im, gt, h, w = self.pull_item(index)
+        pcd   = self.data.iloc[index, 0]
+        pcd_origin   = self.data.iloc[index, 1]
+        point = pcl.PointCloud_PointXYZRGBA()
+        point_origin = pcl.PointCloud_PointXYZRGBA()
+        point.from_file(pcd)
+        point_origin.from_file(pcd_origin)
+        point_np = np.zeros((point.size,4), np.float32)
+        point_origin_np = np.zeros((point.size,6), np.float32)
+        for i in range(point.size):
+            point_np[i][0] = point[i][0]
+            point_np[i][1] = point[i][1]
+            point_np[i][2] = point[i][2]
+            point_np[i][3] = int(point[i][3]) >> 16 & 0x000ff
+
+        if point_np.shape[0] < self.num_point:
+            row_idx = np.random.choice(point_np.shape[0], self.num_point, replace=True)
+        else:
+            row_idx = np.random.choice(point_np.shape[0], self.num_point, replace=False)
+        row_idx = np.sort(row_idx)
+        point_out = torch.from_numpy(point_np[row_idx,:3])  	## need to revise
+        label = torch.from_numpy(point_np[row_idx,3])			## need to revise
+        
+        origin_list = []
+        for i in range(point.size):
+            point_origin_np[i][0] = point_origin[i][0]
+            point_origin_np[i][1] = point_origin[i][1]
+            point_origin_np[i][2] = point_origin[i][2]
+            point_origin_np[i][3] = int(point_origin[i][3]) >> 0 & 0x000ff
+            point_origin_np[i][4] = int(point_origin[i][3]) >> 8 & 0x000ff
+            point_origin_np[i][5] = int(point_origin[i][3]) >> 16 & 0x000ff
+
+        #print point_origin_np[0] , point_origin_np[1]
+
+        point_origin_np = point_origin_np[row_idx]
+        # print origin_list[0] , origin_list[1]
+
+
+        point_out = np.transpose(point_out, (1, 0))
+
+        target = torch.zeros((self.num_point,2))
+        #target = torch.zeros((self.num_point), dtype = torch.long)
+        for i in range(self.num_point):
+        	#print label[i]
+        	#target[i] = int(label[i])
+        	target[i][int(label[i])] = 1
+        out = {'x': point_out, 'y': target, 'origin': point_origin_np ,'path': pcd_origin}
+        return out
+
 
     def __len__(self):
-        return self.num_examples
+        return len(self.data)
 
-    def pull_item(self, index):
-        img_id = self.ids[index]
+    # def pull_item(self, index):
+    #     img_id = self.ids[index]
 
-        target = ET.parse(self._annopath % img_id).getroot()
-        img = cv2.imread(self._imgpath % img_id)
-        height, width, channels = img.shape
+    #     target = ET.parse(self._annopath % img_id).getroot()
+    #     img = cv2.imread(self._imgpath % img_id)
+    #     height, width, channels = img.shape
 
-        if self.target_transform is not None:
-            target = self.target_transform(target, width, height)
+    #     if self.target_transform is not None:
+    #         target = self.target_transform(target, width, height)
 
-        if self.transform is not None:
-            target = np.array(target)
-            img, boxes, labels = self.transform(img, target[:, :4], target[:, 4])
-            # to rgb
-            img = img[:, :, (2, 1, 0)]
-            # img = img.transpose(2, 0, 1)
-            target = np.hstack((boxes, np.expand_dims(labels, axis=1)))
-        return torch.from_numpy(img).permute(2, 0, 1), target, height, width
+    #     if self.transform is not None:
+    #         target = np.array(target)
+    #         img, boxes, labels = self.transform(img, target[:, :4], target[:, 4])
+    #         # to rgb
+    #         img = img[:, :, (2, 1, 0)]
+    #         # img = img.transpose(2, 0, 1)
+    #         target = np.hstack((boxes, np.expand_dims(labels, axis=1)))
+    #     return torch.from_numpy(img).permute(2, 0, 1), target, height, width

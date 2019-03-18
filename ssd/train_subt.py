@@ -29,7 +29,7 @@ parser.add_argument('--dataset_root', default=subt_ROOT,
                     help='Dataset root directory path')
 parser.add_argument('--basenet', default='vgg16_reducedfc.pth',
                     help='Pretrained base model')
-parser.add_argument('--batch_size', default=32, type=int,
+parser.add_argument('--batch_size', default=15, type=int,
                     help='Batch size for training')
 parser.add_argument('--resume', default=None, type=str,
                     help='Checkpoint state_dict file to resume training from')
@@ -207,7 +207,7 @@ def train():
             update_vis_plot_iter(viz, iteration, loss_l.data, loss_c.data,
                             iter_plot, 'append')
 
-        if iteration != 0 and iteration % 1000 == 0:
+        if iteration != 0 and iteration % 2500 == 0:
             print('Saving state, iter:', iteration)
             torch.save(ssd_net.state_dict(), 'weights/ssd300_subt_' +
                        repr(iteration) + '.pth')

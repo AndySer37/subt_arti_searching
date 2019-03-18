@@ -1,24 +1,12 @@
-"""VOC Dataset Classes
-
-Original author: Francisco Massa
-https://github.com/fmassa/vision/blob/voc_dataset/torchvision/datasets/voc.py
-
-Updated by: Ellis Brown, Max deGroot
-"""
-from .config import HOME
-import os.path as osp
 import sys
+import pcl
 import torch
-import torch.utils.data as data
-if '/opt/ros/kinetic/lib/python2.7/dist-packages' in sys.path:
-    sys.path.remove('/opt/ros/kinetic/lib/python2.7/dist-packages')
-import cv2
-import cv2
+import torch.utils.data
+import pandas as pd
+import os
+import pickle
 import numpy as np
-if sys.version_info[0] == 2:
-    import xml.etree.cElementTree as ET
-else:
-    import xml.etree.ElementTree as ET
+import math
 
 subt_CLASSES =  [  # always index 0
     'bb_extinguisher']
@@ -90,57 +78,82 @@ class subtAnnotationTransform(object):
                 res += [bndbox]  # [xmin, ymin, xmax, ymax, label_ind]
         return res  # [[xmin, ymin, xmax, ymax, label_ind], ... ]
 
-class subtDetection(data.Dataset):
-    """VOC Detection Dataset Object
 
-    input is image, target is annotation
+class InstanceSeg_Dataset(torch.utils.data.Dataset):
+    def __init__(self, data_path, type, num_point,image_sets=[('train'), ('test')],
+                 transform=None, target_transform=subtAnnotationTransform(), dataset_name='subt'):
+        self.fx = 618.2425537109375
+        self.fy = 618.5384521484375
+        self.cx = 327.95947265625
+        self.cy = 247.670654296875
 
-    Arguments:
-        root (string): filepath to VOCdevkit folder.
-        image_set (string): imageset to use (eg. 'train', 'val', 'test')
-        transform (callable, optional): transformation to perform on the
-            input image
-        target_transform (callable, optional): transformation to perform on the
-            target `annotation`
-            (eg: take in caption string, return tensor of word indices)
-        dataset_name (string, optional): which dataset to load
-            (default: 'VOC2007')
-    """
+        self.num_point = num_point
+        self.root = data_path
 
-
-    def __init__(self, root,
-                 image_sets=[('train'), ('test')],
-                 transform=None, target_transform=subtAnnotationTransform(),
-                 dataset_name='subtreal'):
-        self.root = root
-        self.image_set = image_sets
         self.transform = transform
         self.target_transform = target_transform
         self.name = dataset_name
         self._annopath = osp.join('%s', 'Annotations', '%s.xml')
         self._imgpath = osp.join('%s', 'image', '%s.jpg')
+        self._maskpath = osp.join('%s', 'mask', '%s.png')
+        self._depthpath = osp.join('%s', 'depth', '%s.png')
         self.ids = list()
         for name in image_sets:
             rootpath = osp.join(self.root)
             for line in open(osp.join(rootpath, 'ImageSets/Main', name + '.txt')):
                 self.ids.append((rootpath, line.strip().split(' ')[0]))
 
-    def __getitem__(self, index):
-        im, gt, h, w = self.pull_item(index)
 
-        return im, gt
+    def __getitem__(self, index):
+
+        im, mask, depth, gt, h, w, img_id = self.pull_item(index)
+        gt = gt[0]
+        point = list()
+        label = list()
+        for i in range(h):
+            for j in range(w):
+                if gt[0] <= i <= gt[2] and gt[1] <= j <= gt[3]:
+                    z = depth[i,j]
+                    x, y, z = self.getXYZ(j,i,z)
+                    point.append([z,-y,-x])
+                    label.append([mask[i,j]])
+        point = np.asarray(point, dtype = np.float32)
+
+        if point_np.shape[0] < self.num_point:
+            row_idx = np.random.choice(point_np.shape[0], self.num_point, replace=True)
+        else:
+            row_idx = np.random.choice(point_np.shape[0], self.num_point, replace=False)        
+
+
+        point_out = torch.from_numpy(point_np[row_idx,:3])  	## need to revise
+        label = label[row_idx,3]			## need to revise
+
+        target = torch.zeros((self.num_point,2))
+        # #target = torch.zeros((self.num_point), dtype = torch.long)
+        for i in range(self.num_point):
+            #print label[i]
+            #target[i] = int(label[i])
+            target[i][int(label[i])] = 1
+        point_out = np.transpose(point_out, (1, 0))
+
+        out = {'x': point_out, 'y': target, 'id': img_id}
+        return out
+
 
     def __len__(self):
-        return len(self.ids)
+        return len(self.data)
 
     def pull_item(self, index):
         img_id = self.ids[index]
 
         target = ET.parse(self._annopath % img_id).getroot()
         img = cv2.imread(self._imgpath % img_id)
+        depth = cv2.imread(self._depthpath % img_id)
+        mask = cv2.imread(self._maskpath % img_id)
         height, width, channels = img.shape
 
         if self.target_transform is not None:
+            ### targe = [[xmin, ymin, xmax, ymax, label_ind], ... ]
             target = self.target_transform(target, width, height)
 
         if self.transform is not None:
@@ -150,50 +163,22 @@ class subtDetection(data.Dataset):
             img = img[:, :, (2, 1, 0)]
             # img = img.transpose(2, 0, 1)
             target = np.hstack((boxes, np.expand_dims(labels, axis=1)))
-        return torch.from_numpy(img).permute(2, 0, 1), target, height, width
-        # return torch.from_numpy(img), target, height, width
+        
+        return img, mask, depth, target, height, width, img_id
 
-    def pull_image(self, index):
-        '''Returns the original image object at index in PIL form
+        # return torch.from_numpy(img).permute(2, 0, 1), target, height, width
 
-        Note: not using self.__getitem__(), as any transformations passed in
-        could mess up this functionality.
+        ########## return torch.from_numpy(img), target, height, width ############
 
-        Argument:
-            index (int): index of img to show
-        Return:
-            PIL img
-        '''
-        img_id = self.ids[index]
-
-        return cv2.imread(self._imgpath % img_id, cv2.IMREAD_COLOR)
-
-    def pull_anno(self, index):
-        '''Returns the original annotation of image at index
-
-        Note: not using self.__getitem__(), as any transformations passed in
-        could mess up this functionality.
-
-        Argument:
-            index (int): index of img to get annotation of
-        Return:
-            list:  [img_id, [(label, bbox coords),...]]
-                eg: ('001718', [('dog', (96, 13, 438, 332))])
-        '''
-        img_id = self.ids[index]
-        anno = ET.parse(self._annopath % img_id).getroot()
-        gt = self.target_transform(anno, 1, 1)
-        return img_id[1], gt
-
-    def pull_tensor(self, index):
-        '''Returns the original image at an index in tensor form
-
-        Note: not using self.__getitem__(), as any transformations passed in
-        could mess up this functionality.
-
-        Argument:
-            index (int): index of img to show
-        Return:
-            tensorized version of img, squeezed
-        '''
-        return torch.Tensor(self.pull_image(index)).unsqueeze_(0)
+    def getXYZ(self,xp, yp, zc):
+        #### Definition:
+        # cx, cy : image center(pixel)
+        # fx, fy : focal length
+        # xp, yp: index of the depth image
+        # zc: depth
+        inv_fx = 1.0/self.fx
+        inv_fy = 1.0/self.fy
+        x = (xp-self.cx) *  zc * inv_fx
+        y = (yp-self.cy) *  zc * inv_fy
+        z = zc
+        return (x,y,z)
