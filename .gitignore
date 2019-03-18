@@ -1,5 +1,8 @@
 *.jpg
 *.png
+build/
+devel/
+*.pyc
 data/
 weights/
 *.pkl
