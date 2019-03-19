@@ -22,7 +22,7 @@ num_points = 20000
 network = InstanceSeg(num_points = num_points)
 network = network.cuda()
 
-train_dataset = InstanceSeg_Dataset(data_path="/home/andyser/data/subt_real",type="train",num_point = num_points)
+train_dataset = InstanceSeg_Dataset(data_path="/home/andyser/data/subt_real",num_point = num_points)
 train_loader = torch.utils.data.DataLoader(dataset=train_dataset,
                                            batch_size=batch_size, shuffle=True,
                                            num_workers=16)

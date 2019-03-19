@@ -31,7 +31,7 @@ class bb_pointnet(object):
 		self.cy = 247.670654296875
 
 		self.cv_bridge = CvBridge() 
-		self.num_points = 8000
+		self.num_points = 10000
 		self.network = InstanceSeg(num_points = self.num_points)
 		self.network = self.network.cuda()
 		model_dir = "/home/andyser/code/subt_related/subt_arti_searching/BB_for_pointnet/weights"
@@ -51,12 +51,14 @@ class bb_pointnet(object):
 
 		try:
 			img = self.cv_bridge.imgmsg_to_cv2(msg.image, "bgr8")
-			depth = self.cv_bridge.imgmsg_to_cv2(msg.depth, "16FC1")
-			mask = self.cv_bridge.imgmsg_to_cv2(msg.mask, "64FC1")
+			depth = self.cv_bridge.imgmsg_to_cv2(msg.depth, "16UC1")
+			mask = self.cv_bridge.imgmsg_to_cv2(msg.mask, "8UC1")
 		except CvBridgeError as e:
 			print(e)
 
-		(h, w, c) = img.shape		
+		#print np.unique(depth)
+		(h, w, c) = img.shape
+
 		point = list()
 		origin = list()
 		for i in range(h):
@@ -68,10 +70,10 @@ class bb_pointnet(object):
 						point.append([z,-y,-x])
 						(r,g,b) = img[i,j]
 						origin.append([z,-y,-x,r,g,b])
-						
+		
 		point = np.asarray(point, dtype = np.float32)
 		origin = np.asarray(origin, dtype = np.float32)	
-
+		#print point.shape
 		if point.shape[0] < self.num_points:
 			row_idx = np.random.choice(point.shape[0], self.num_points, replace=True)
 		else:
@@ -103,10 +105,10 @@ class bb_pointnet(object):
 
 		fields = [PointField('x', 0, PointField.FLOAT32, 1), PointField('y', 4, PointField.FLOAT32, 1), PointField('z', 8, PointField.FLOAT32, 1), PointField('rgb', 12, PointField.UINT32, 1)]
 		pointcloud_pre = point_cloud2.create_cloud(header, fields, _point_list)
-		pointcloud_origin = point_cloud2.create_cloud(header, fields, _point_list)
+		pointcloud_origin = point_cloud2.create_cloud(header, fields, _origin_list)
 
 		self.prediction.publish(pointcloud_pre)
-		self.origin.publish(pointcloud_pre)
+		self.origin.publish(pointcloud_origin)
 
 	def onShutdown(self):
 		rospy.loginfo("Shutdown.")	

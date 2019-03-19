@@ -50,9 +50,11 @@ class InstanceSeg(nn.Module):
         out = torch.cat([global_feature_repeated, point_features], 1) # (shape: (batch_size, 1024+64=1088, num_points))
 
         out = F.relu(self.conv6(out)) # (shape: (batch_size, 512, num_points))
+        out = F.relu(self.conv6_2(out)) # (shape: (batch_size, 512, num_points))
+        out = F.relu(self.conv6_3(out)) # (shape: (batch_size, 512, num_points))
         out = F.relu(self.conv7(out)) # (shape: (batch_size, 256, num_points))
         out = F.relu(self.conv7_2(out)) # (shape: (batch_size, 256, num_points))
-        out = F.relu(self.conv7(out)) # (shape: (batch_size, 256, num_points))
+        out = F.relu(self.conv7_3(out)) # (shape: (batch_size, 256, num_points))
         out = F.relu(self.conv8(out)) # (shape: (batch_size, 128, num_points))
         out = F.relu(self.conv9(out)) # (shape: (batch_size, 128, num_points))
 

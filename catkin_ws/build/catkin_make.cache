@@ -1,2 +1,0 @@
-bb_pointnet
--DCATKIN_DEVEL_PREFIX=/home/andyser/code/subt_related/subt_arti_searching/catkin_ws/devel -DCMAKE_INSTALL_PREFIX=/home/andyser/code/subt_related/subt_arti_searching/catkin_ws/install -G Unix Makefiles

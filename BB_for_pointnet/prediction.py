@@ -19,7 +19,7 @@ num_points = 8000
 network = InstanceSeg(num_points = num_points)
 network = network.cuda()
 
-test_dataset = InstanceSeg_Dataset(data_path="/home/andyser/data/subt_real",type="test",num_point = num_points)
+test_dataset = InstanceSeg_Dataset(data_path="/home/andyser/data/subt_real",num_point = num_points,image_sets = ['test'])
 test_loader = torch.utils.data.DataLoader(dataset=test_dataset,
                                            batch_size=1, shuffle=True,
                                            num_workers=16)

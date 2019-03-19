@@ -88,7 +88,7 @@ class subtAnnotationTransform(object):
 
 
 class InstanceSeg_Dataset(torch.utils.data.Dataset):
-    def __init__(self, data_path, type, num_point,image_sets=[('train'), ('test')],
+    def __init__(self, data_path, num_point,image_sets=['train'],
                  transform=None, target_transform=subtAnnotationTransform(), dataset_name='subt'):
         self.fx = 618.2425537109375
         self.fy = 618.5384521484375
@@ -129,8 +129,8 @@ class InstanceSeg_Dataset(torch.utils.data.Dataset):
         label = list()
         origin = list()
 
-        for i in range(len(gt)):
-            gt[i] += 20
+        # for i in range(len(gt)):
+        #     gt[i] += 20
 
         for i in range(h):
             for j in range(w):
@@ -145,7 +145,7 @@ class InstanceSeg_Dataset(torch.utils.data.Dataset):
         point = np.asarray(point, dtype = np.float32)
         label = np.asarray(label, dtype = np.float32)
         origin = np.asarray(origin, dtype = np.float32)
-        print point.shape[0]
+        #print point.shape[0]
 
         if point.shape[0] < self.num_point:
             row_idx = np.random.choice(point.shape[0], self.num_point, replace=True)

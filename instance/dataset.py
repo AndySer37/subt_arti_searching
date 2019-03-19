@@ -40,7 +40,7 @@ class InstanceSeg_Dataset(torch.utils.data.Dataset):
             row_idx = np.random.choice(point_np.shape[0], self.num_point, replace=True)
         else:
             row_idx = np.random.choice(point_np.shape[0], self.num_point, replace=False)
-        row_idx = np.sort(row_idx)
+        # row_idx = np.sort(row_idx)
         point_out = torch.from_numpy(point_np[row_idx,:3])  	## need to revise
         label = torch.from_numpy(point_np[row_idx,3])			## need to revise
         
