@@ -11,21 +11,22 @@ import numpy as np
 import matplotlib
 import pcl
 
+
 num_epochs = 10
 batch_size = 1
 learning_rate = 0.001
-num_points = 8000
-network = PointNetDenseCls(k = 2)  #(num_points = num_points)
+num_points = 5000
+network = PointNetCls(k = 2)  #(num_points = num_points)
 #network = InstanceSeg(num_points = num_points)
 network = network.cuda()
 
-test_dataset = InstanceSeg_Dataset(data_path="/home/andyser/data/subt_real",num_point = num_points,image_sets = ['test'])
+test_dataset = clsSeg_Dataset(data_path="/home/andyser/data/subt_real",num_point = num_points,image_sets = ['test'])
 test_loader = torch.utils.data.DataLoader(dataset=test_dataset,
                                            batch_size=1, shuffle=True,
                                            num_workers=16)
 
 
-state_dict = torch.load("./weights/pointnet_new_epoch_55.pkl")
+state_dict = torch.load("./weights/pointnet_cls_epoch_55.pkl")
 network.load_state_dict(state_dict)
 dataiter = iter(test_loader)
 network.eval()
@@ -37,33 +38,24 @@ def prediction(dataiter, network):
     origin = Variable(batch['origin'])[0]
     labels = Variable(batch['y'].cuda())[0]	
     output = network(inputs)[0][0]
-    point = pcl.PointCloud_PointXYZRGBA()
     point_origin = pcl.PointCloud_PointXYZRGBA()
     _origin_list = []
-    _point_list = []
     in_point = np.transpose(inputs[0].cpu().numpy(), (1, 0))
     print batch['id']
-    #print labels,output
+    print output.argmax()
+    print output
+    if output.argmax() == labels:
+        print("right")
+    else:
+        print("wrong")
     for i in range(len(in_point)):
-
-        # if labels[i].argmax() == 1:
-        #     print output[i], labels[i]
-
         red = float(origin[i][3] >> 16)
         green = float(origin[i][4] >> 8) 
         blue = float(origin[i][5] >> 0) 
         rgb = float(int(origin[i][5] << 16) | int(origin[i][4] << 8) | int(origin[i][3]))    
-        #if output[i].argmax() == labels[i] and output[i].argmax() == 1:
-        if output[i].argmax() == labels[i].argmax() and output[i].argmax() == 1:
-        #if output[i][0] < -0.1:
-            _point_list.append([inputs[0][0][i], inputs[0][1][i], inputs[0][2][i],rgb])
-        else:
-            _origin_list.append([inputs[0][0][i], inputs[0][1][i], inputs[0][2][i],rgb])
+        _origin_list.append([inputs[0][0][i], inputs[0][1][i], inputs[0][2][i],rgb])
 
 
-
-    point.from_array(np.asarray(_point_list,dtype = np.float32))
-    point.to_file("./out.pcd")
 
     point_origin.from_array(np.asarray(_origin_list,dtype = np.float32))
     point_origin.to_file("./origin.pcd")

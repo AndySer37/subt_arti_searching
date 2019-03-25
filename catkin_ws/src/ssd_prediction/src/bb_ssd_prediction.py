@@ -22,6 +22,7 @@ from torch.autograd import Variable
 from ssd import build_ssd
 from bb_pointnet.msg import * 
 import os 
+import message_filters
 
 class bb_ssd_prediction(object):
 	def __init__(self):
@@ -29,31 +30,39 @@ class bb_ssd_prediction(object):
 		self.cv_bridge = CvBridge() 
 		self.num_points = 8000
 		self.labels = ['background' , # always index 0
-				'bb_extinguisher']
+				'bb_extinguisher','bb_drill']
 		self.objects = []
-		self.network = build_ssd('test', 300, 4) # len(self.labels)) 
+		self.network = build_ssd('test', 300, 4)#len(self.labels)) 
 		self.is_compressed = False
-		self.network = self.network.cuda()
+
+		self.cuda_use = torch.cuda.is_available()
+		self.cuda_use = False
+
+		if self.cuda_use:
+			self.network = self.network.cuda()
 		model_dir = "/home/andyser/code/subt_related/subt_arti_searching/ssd/weights"
-		model_name = "ssd300_subt_47500.pth"	
+		model_name = "extinguisher.pth"	
 		state_dict = torch.load(os.path.join(model_dir, model_name))
 		self.network.load_state_dict(state_dict)
-
+		#### Publisher
 		self.origin = rospy.Publisher('/input', bb_input, queue_size=1)
 		self.image_pub = rospy.Publisher("/predict_img", Image, queue_size = 1)
-
 		self.mask_pub = rospy.Publisher("/predict_mask", Image, queue_size = 1)
-		rospy.Subscriber("/camera/color/image_rect_color", Image, self.callback)
 
-	def callback(self, msg):
+		### msg filter 
+		image_sub = message_filters.Subscriber('/camera/color/image_rect_color', Image)
+		depth_sub = message_filters.Subscriber('/camera/aligned_depth_to_color/image_raw', Image)
+		ts = message_filters.TimeSynchronizer([image_sub, depth_sub], 10)
+		ts.registerCallback(self.callback)
 
-		depth = rospy.wait_for_message('/camera/aligned_depth_to_color/image_raw', Image, timeout=None)
+	def callback(self, img_msg, depth):
+
 		try:
 			if self.is_compressed:
-				np_arr = np.fromstring(msg.data, np.uint8)
+				np_arr = np.fromstring(img_msg.data, np.uint8)
 				cv_image = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
 			else:
-				cv_image = self.cv_bridge.imgmsg_to_cv2(msg, "bgr8")
+				cv_image = self.cv_bridge.imgmsg_to_cv2(img_msg, "bgr8")
 		except CvBridgeError as e:
 			print(e)
 		img = cv_image.copy()
@@ -70,10 +79,10 @@ class bb_ssd_prediction(object):
 
 		for obj in obj_list:
 			out = bb_input()
-			obj[0] = obj[0] - 30
-			obj[1] = obj[1]	- 30
-			obj[2] = obj[2] + 100
-			obj[3] = obj[3] + 100
+			# obj[0] = obj[0] - 30
+			# obj[1] = obj[1]	- 30
+			# obj[2] = obj[2] + 100
+			# obj[3] = obj[3] + 100
 
 			mask = np.zeros((rows, cols), dtype = np.uint8)
 			point_list = [(int(obj[0]), int(obj[1])),(int(obj[0] + obj[2]),int(obj[1])),\
@@ -87,14 +96,13 @@ class bb_ssd_prediction(object):
 			out.header = msg.header
 			self.mask_pub.publish(out.mask)
 			self.origin.publish(out)
+
 		# try:
 		# 	img = self.cv_bridge.imgmsg_to_cv2(msg.data, "bgr8")
 		# 	depth = self.cv_bridge.imgmsg_to_cv2(msg.depth, "16FC1")
 		# 	mask = self.cv_bridge.imgmsg_to_cv2(msg.mask, "64FC1")
 		# except CvBridgeError as e:
 		# 	print(e)
-
-
 
 	def predict(self, img):
 		# Preprocessing
@@ -107,7 +115,7 @@ class bb_ssd_prediction(object):
 
 		#SSD Forward Pass
 		xx = Variable(x.unsqueeze(0))     # wrap tensor in Variable
-		if torch.cuda.is_available():
+		if self.cuda_use:
 			xx = xx.cuda()
 		y = self.network(xx)
 		scale = torch.Tensor(img.shape[1::-1]).repeat(2)
@@ -161,8 +169,4 @@ if __name__ == '__main__':
 	rospy.init_node('bb_ssd_prediction',anonymous=False)
 	bb_ssd_prediction = bb_ssd_prediction()
 	rospy.on_shutdown(bb_ssd_prediction.onShutdown)
-
-	# while(1):
-	# 	bb_pointnet.callback()
-
 	rospy.spin()

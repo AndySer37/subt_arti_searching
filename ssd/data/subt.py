@@ -20,7 +20,7 @@ else:
     import xml.etree.ElementTree as ET
 
 subt_CLASSES =  [  # always index 0
-    'bb_extinguisher']
+    'bb_extinguisher', 'bb_drill']
 
 # note: if you used our download scripts, this should be right
 subt_ROOT = osp.join(HOME, "data/subt_real/")
@@ -125,8 +125,10 @@ class subtDetection(data.Dataset):
                 self.ids.append((rootpath, line.strip().split(' ')[0]))
 
     def __getitem__(self, index):
-        im, gt, h, w = self.pull_item(index)
-
+        try:
+            im, gt, h, w = self.pull_item(index)
+        except:
+            print(self.ids[index])
         return im, gt
 
     def __len__(self):

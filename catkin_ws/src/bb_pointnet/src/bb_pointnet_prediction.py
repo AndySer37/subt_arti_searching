@@ -1,6 +1,7 @@
 #!/usr/bin/env python
 
 from InstanceSeg_net import *
+from pointnet import *
 import torch
 import torch.utils.data
 import torch.nn as nn
@@ -23,7 +24,7 @@ import os
 class bb_pointnet(object):
 	def __init__(self):
 		self.subt_CLASSES =  [  # always index 0
-				'bb_extinguisher']
+				'bb_extinguisher', 'bb_drill']
 
 		self.fx = 618.2425537109375
 		self.fy = 618.5384521484375
@@ -32,10 +33,12 @@ class bb_pointnet(object):
 
 		self.cv_bridge = CvBridge() 
 		self.num_points = 10000
-		self.network = InstanceSeg(num_points = self.num_points)
+		
+		#self.network = InstanceSeg(num_points = self.num_points)
+		self.network = PointNetDenseCls(k = 2) 
 		self.network = self.network.cuda()
 		model_dir = "/home/andyser/code/subt_related/subt_arti_searching/BB_for_pointnet/weights"
-		model_name = "pointnet_epoch_55.pkl"	
+		model_name = "pointnet_new_epoch_55.pkl"	
 		state_dict = torch.load(os.path.join(model_dir, model_name))
 		self.network.load_state_dict(state_dict)
 		self.prediction = rospy.Publisher('/prediction', PointCloud2, queue_size=10)
@@ -86,7 +89,7 @@ class bb_pointnet(object):
 
 		point_in = point_in[np.newaxis,:]
 		inputs = Variable(point_in.cuda())
-		output = self.network(inputs)[0]
+		output = self.network(inputs)[0][0]
 
 		_point_list = []
 		_origin_list = []
