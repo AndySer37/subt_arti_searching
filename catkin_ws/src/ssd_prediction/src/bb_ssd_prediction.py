@@ -26,22 +26,22 @@ import message_filters
 
 class bb_ssd_prediction(object):
 	def __init__(self):
-		self.prob_threshold = 0.8
+		self.prob_threshold = 0.7
 		self.cv_bridge = CvBridge() 
 		self.num_points = 8000
 		self.labels = ['background' , # always index 0
 				'bb_extinguisher','bb_drill']
 		self.objects = []
-		self.network = build_ssd('test', 300, 4)#len(self.labels)) 
+		self.network = build_ssd('test', 300, len(self.labels)) 
 		self.is_compressed = False
 
 		self.cuda_use = torch.cuda.is_available()
-		self.cuda_use = False
+		#self.cuda_use = False
 
 		if self.cuda_use:
 			self.network = self.network.cuda()
 		model_dir = "/home/andyser/code/subt_related/subt_arti_searching/ssd/weights"
-		model_name = "extinguisher.pth"	
+		model_name = "ssd300_subt_50000.pth"	
 		state_dict = torch.load(os.path.join(model_dir, model_name))
 		self.network.load_state_dict(state_dict)
 		#### Publisher
@@ -93,7 +93,7 @@ class bb_ssd_prediction(object):
 			out.image = self.cv_bridge.cv2_to_imgmsg(img, "bgr8")
 			out.mask = self.cv_bridge.cv2_to_imgmsg(mask, "8UC1")
 			out.depth = depth
-			out.header = msg.header
+			out.header = img_msg.header
 			self.mask_pub.publish(out.mask)
 			self.origin.publish(out)
 
