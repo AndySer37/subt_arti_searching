@@ -26,11 +26,11 @@ import message_filters
 
 class bb_ssd_prediction(object):
 	def __init__(self):
-		self.prob_threshold = 0.7
+		self.prob_threshold = 0.1
 		self.cv_bridge = CvBridge() 
 		self.num_points = 8000
 		self.labels = ['background' , # always index 0
-				'bb_extinguisher','bb_drill']
+				'bb_extinguisher','bb_drill','bb_backpack']
 		self.objects = []
 		self.network = build_ssd('test', 300, len(self.labels)) 
 		self.is_compressed = False
@@ -41,7 +41,7 @@ class bb_ssd_prediction(object):
 		if self.cuda_use:
 			self.network = self.network.cuda()
 		model_dir = "/home/andyser/code/subt_related/subt_arti_searching/ssd/weights"
-		model_name = "ssd300_subt_50000.pth"	
+		model_name = "ssd300_subt_110000.pth"	
 		state_dict = torch.load(os.path.join(model_dir, model_name))
 		self.network.load_state_dict(state_dict)
 		#### Publisher
@@ -50,10 +50,15 @@ class bb_ssd_prediction(object):
 		self.mask_pub = rospy.Publisher("/predict_mask", Image, queue_size = 1)
 
 		### msg filter 
-		image_sub = message_filters.Subscriber('/camera/color/image_rect_color', Image)
-		depth_sub = message_filters.Subscriber('/camera/aligned_depth_to_color/image_raw', Image)
-		ts = message_filters.TimeSynchronizer([image_sub, depth_sub], 10)
-		ts.registerCallback(self.callback)
+
+		video_mode = True 
+		if video_mode:
+			image_sub = rospy.Subscriber('/camera/color/image_raw', Image, self.video_callback)
+		else:
+			image_sub = message_filters.Subscriber('/camera/color/image_rect_color', Image)
+			depth_sub = message_filters.Subscriber('/camera/aligned_depth_to_color/image_raw', Image)
+			ts = message_filters.TimeSynchronizer([image_sub, depth_sub], 10)
+			ts.registerCallback(self.callback)
 
 	def callback(self, img_msg, depth):
 
@@ -103,7 +108,36 @@ class bb_ssd_prediction(object):
 		# 	mask = self.cv_bridge.imgmsg_to_cv2(msg.mask, "64FC1")
 		# except CvBridgeError as e:
 		# 	print(e)
+	def video_callback(self, img_msg):
 
+		try:
+			if self.is_compressed:
+				np_arr = np.fromstring(img_msg.data, np.uint8)
+				cv_image = cv2.imdecode(np_arr, cv2.IMREAD_COLOR)
+			else:
+				cv_image = self.cv_bridge.imgmsg_to_cv2(img_msg, "bgr8")
+		except CvBridgeError as e:
+			print(e)
+		img = cv_image.copy()
+		
+
+		(rows, cols, channels) = cv_image.shape
+		self.width = cols
+		self.height = rows
+		predict_img, obj_list = self.predict(cv_image)
+		try:
+			self.image_pub.publish(self.cv_bridge.cv2_to_imgmsg(predict_img, "bgr8"))
+		except CvBridgeError as e:
+			print(e)
+
+		for obj in obj_list:
+			mask = np.zeros((rows, cols), dtype = np.uint8)
+			point_list = [(int(obj[0]), int(obj[1])),(int(obj[0] + obj[2]),int(obj[1])),\
+				(int(obj[0] + obj[2]), int(obj[1] + obj[3])), (int(obj[0]), int(obj[1] + obj[3]))]
+
+			cv2.fillConvexPoly(mask, np.asarray(point_list,dtype = np.int), 255)
+			mask = self.cv_bridge.cv2_to_imgmsg(mask, "8UC1")
+			self.mask_pub.publish(mask)
 	def predict(self, img):
 		# Preprocessing
 		image = cv2.cvtColor(img, cv2.COLOR_RGB2BGR)
