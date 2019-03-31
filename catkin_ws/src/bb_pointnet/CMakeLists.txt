@@ -58,11 +58,11 @@ add_message_files(
 )
 
 ## Generate services in the 'srv' folder
-# add_service_files(
-#   FILES
-#   Service1.srv
-#   Service2.srv
-# )
+add_service_files(
+  FILES
+  pointnet_prediction.srv
+  pointnet_whole_scene.srv
+)
 
 ## Generate actions in the 'action' folder
 # add_action_files(
@@ -113,6 +113,7 @@ catkin_package(
 #  LIBRARIES bb_pointnet
 #  CATKIN_DEPENDS roscpp rospy std_msgs
 #  DEPENDS system_lib
+    CATKIN_DEPENDS message_runtime
 )
 
 ###########

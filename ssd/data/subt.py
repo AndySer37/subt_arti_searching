@@ -108,7 +108,7 @@ class subtDetection(data.Dataset):
 
 
     def __init__(self, root,
-                 image_sets=[('train'), ('test')],
+                 image_sets=[('train')],
                  transform=None, target_transform=subtAnnotationTransform(),
                  dataset_name='subtreal'):
         self.root = root
@@ -123,6 +123,7 @@ class subtDetection(data.Dataset):
             rootpath = osp.join(self.root)
             for line in open(osp.join(rootpath, 'ImageSets/Main', name + '.txt')):
                 self.ids.append((rootpath, line.strip().split(' ')[0]))
+        print ("len: ", len(self.ids))
 
     def __getitem__(self, index):
         try:

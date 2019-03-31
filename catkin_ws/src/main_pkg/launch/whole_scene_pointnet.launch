@@ -1,0 +1,9 @@
+<?xml version="1.0" ?>
+<launch>
+  <include file="$(find pcl_exercise)/launch/pc_preprocessing.launch"></include>
+  <include file="$(find bb_pointnet)/launch/whole_scene_pointnet.launch"></include>
+  <include file="$(find realsense2_camera)/launch/rs_rgbd.launch">
+<!-- 		<arg name="depth_fps" value="10"/>
+		<arg name="color_fps" value="10"/> -->
+  </include>
+</launch>

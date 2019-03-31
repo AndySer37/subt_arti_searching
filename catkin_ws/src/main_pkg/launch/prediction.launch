@@ -2,7 +2,7 @@
 <launch>
 	
   <include file="$(find pcl_exercise)/launch/depth_to_point.launch"></include> 
-<!--   <include file="$(find bb_pointnet)/launch/bb_pointnet.launch"></include> -->
+  <include file="$(find bb_pointnet)/launch/bb_pointnet.launch"></include>
   <include file="$(find ssd_prediction)/launch/ssd_prediction.launch"></include>  
   <include file="$(find realsense2_camera)/launch/rs_rgbd.launch">
 <!-- 		<arg name="depth_fps" value="10"/>

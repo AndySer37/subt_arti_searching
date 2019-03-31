@@ -33,26 +33,27 @@ class bb_pointnet(object):
 		self.cy = 247.670654296875
 
 		self.cv_bridge = CvBridge() 
-		self.num_points = 10000
+		self.num_points = 60000
 		
 		#self.network = InstanceSeg(num_points = self.num_points)
 		self.network = PointNetDenseCls(k = 2) 
 		self.network = self.network.cuda()
-		model_dir = "/home/andyser/code/subt_related/subt_arti_searching/BB_for_pointnet/weights"
-		model_name = "pointnet_new_epoch_55.pkl"	
+		model_dir = "/home/andyser/code/subt_related/subt_arti_searching/instance/weights"
+		model_name = "pointnet_epoch_90.pkl"	
 		state_dict = torch.load(os.path.join(model_dir, model_name))
 		self.network.load_state_dict(state_dict)
-		self.prediction = rospy.Publisher('/prediction', PointCloud2, queue_size=10)
 		self.origin = rospy.Publisher('/origin', PointCloud2, queue_size=10)
-		self.predict_ser = rospy.Service("/pointnet_prediction", pointnet_prediction, self.callback)
+		self.prediction = rospy.Publisher('/prediction', PointCloud2, queue_size=10)
+		self.predict_ser = rospy.Service("/pointnet_whole_scene", pointnet_whole_scene, self.callback)
 
 	def callback(self, req):
 		self.network.eval()
+		pc_msg = rospy.wait_for_message("/pc_preprocessing",PointCloud2)
 		points_list = []
 		color_list = []
 
-		for data in point_cloud2.read_points(req.input_pc, skip_nans=True):
-			points_list.append([data[0], data[1], data[2]])		
+		for data in point_cloud2.read_points(pc_msg, skip_nans=True):
+			points_list.append([data[0], data[1], data[2]])	
 			color_list.append(data[3])
 
 		point = np.asarray(points_list)
@@ -98,7 +99,7 @@ class bb_pointnet(object):
 		self.prediction.publish(pointcloud_pre)
 		self.origin.publish(pointcloud_origin)
 
-		return "Finish"
+		return "Finish" + ", point num: " + str(len(_point_list)) + ", origin num: " + str(point.shape[0])
 
 	def onShutdown(self):
 		rospy.loginfo("Shutdown.")	

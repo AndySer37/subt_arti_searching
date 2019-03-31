@@ -15,7 +15,7 @@ if sys.version_info[0] == 2:
 else:
     import xml.etree.ElementTree as ET
 subt_CLASSES =  [  # always index 0
-    'bb_extinguisher']
+    'bb_extinguisher','bb_drill']
 HOME = osp.expanduser("~")
 # note: if you used our download scripts, this should be right
 subt_ROOT = osp.join(HOME, "data/subt_real/")
@@ -237,9 +237,11 @@ class clsSeg_Dataset(torch.utils.data.Dataset):
         
         im, mask, depth, gt, h, w, img_id = self.pull_item(index)
         lower_bound = 15
-        upper_bound = 20
-        
-        gt = gt[0]
+        upper_bound = 25
+        try:
+            gt = gt[0]
+        except:
+            print self.ids[index][1]
         x_bb = gt[3] - gt[1]
         y_bb = gt[2] - gt[0]
         _min = min(x_bb, y_bb)
@@ -257,7 +259,7 @@ class clsSeg_Dataset(torch.utils.data.Dataset):
         loop_count = 0
         gt_copy = copy.copy(gt)
         
-        if np.random.random_integers(0, 2, 1) == 1:
+        if np.random.random_integers(0, 4, 1) == 1:
             while True:
                 gt = copy.copy(gt_copy)
                 loop_count += 1
@@ -289,6 +291,7 @@ class clsSeg_Dataset(torch.utils.data.Dataset):
             for i in range(len(subt_CLASSES)):
                 if subt_CLASSES[i][3:] in self.ids[index][1]:
                     label.append(i+1)
+                    #print self.ids[index][1], i+1 
         else:
             label.append(0)
 
@@ -296,7 +299,7 @@ class clsSeg_Dataset(torch.utils.data.Dataset):
         label = np.asarray(label, dtype = np.float32)
         origin = np.asarray(origin, dtype = np.float32)
         ##print point.shape[0]
-        if point.shape[0]==0:
+        if point.shape[0] == 0:
             print gt,self.ids[index][1],gt_copy
 
         if point.shape[0] < self.num_point:

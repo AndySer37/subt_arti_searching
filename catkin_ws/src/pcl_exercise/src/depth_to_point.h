@@ -19,6 +19,7 @@
 #include <sys/types.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include "bb_pointnet/pointnet_prediction.h"
 #include "bb_pointnet/bb_input.h"
 //
 
@@ -37,17 +38,14 @@ class depth_to_point{
   private:
   	Publisher pc_pub_bbox;
   	ros::Subscriber ssd_result;
+    ros::ServiceClient client;
     PointCloud<PointXYZRGB>::Ptr pc;
   	float fx;
   	float fy;
   	float cx;
   	float cy;
+    double time;
 
-  	int count;
-  	int img_num;
-  	string path;
-  	string scene;
-  	string obj;
   	float Projection[3][4];
   	float extrinsics[3][4];
 };

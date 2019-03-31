@@ -203,12 +203,17 @@ include_directories(
 # if(TARGET ${PROJECT_NAME}-test)
 #   target_link_libraries(${PROJECT_NAME}-test ${PROJECT_NAME})
 # endif()
+
 find_package(Eigen3 REQUIRED)
 include_directories(${EIGEN3_INCLUDE_DIRS})
 
 add_executable(depth_to_point  src/depth_to_point.h src/depth_to_point.cpp)
 target_link_libraries(depth_to_point ${catkin_LIBRARIES})
 add_dependencies(depth_to_point src/depth_to_point.cpp ${catkin_EXPORTED_TARGETS})
+
+add_executable(pc_preprocessing src/pc_preprocessing.h src/pc_preprocessing.cpp)
+target_link_libraries(pc_preprocessing ${catkin_LIBRARIES})
+add_dependencies(pc_preprocessing src/pc_preprocessing.cpp ${catkin_EXPORTED_TARGETS})
 
 ## Add folders to be run by python nosetests
 # catkin_add_nosetests(test)
