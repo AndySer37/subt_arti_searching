@@ -202,12 +202,13 @@ def train():
         if iteration % 10 == 0:
             print('timer: %.4f sec.' % (t1 - t0))
             print('iter ' + repr(iteration) + ' || Loss: %.4f ||' % (loss.data), end='')
-
+            for param_group in optimizer.param_groups:
+                print("lr: ", param_group['lr'])
         if args.visdom:
             update_vis_plot_iter(viz, iteration, loss_l.data, loss_c.data,
                             iter_plot, 'append')
 
-        if iteration != 0 and iteration % 10000 == 0:
+        if iteration != 0 and iteration % 20000 == 0:
             print('Saving state, iter:', iteration)
             torch.save(ssd_net.state_dict(), 'weights/ssd300_subt_' +
                        repr(iteration) + '.pth')

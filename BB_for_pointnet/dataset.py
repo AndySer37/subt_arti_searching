@@ -129,8 +129,9 @@ class InstanceSeg_Dataset(torch.utils.data.Dataset):
         label = list()
         origin = list()
 
-        # for i in range(len(gt)):
-        #     gt[i] += 20
+        for i in range(len(subt_CLASSES)):
+            if subt_CLASSES[i][3:] in self.ids[index][1]:
+                _cls = i+1
 
         for i in range(h):
             for j in range(w):
@@ -141,7 +142,7 @@ class InstanceSeg_Dataset(torch.utils.data.Dataset):
                         point.append([z,-y,-x])
                         (r,g,b) = im[i,j]
                         origin.append([z,-y,-x,r,g,b])
-                        label.append([mask[i,j]/255])
+                        label.append([mask[i,j]/255 * _cls])
         point = np.asarray(point, dtype = np.float32)
         label = np.asarray(label, dtype = np.float32)
         origin = np.asarray(origin, dtype = np.float32)
@@ -156,11 +157,11 @@ class InstanceSeg_Dataset(torch.utils.data.Dataset):
         point_out = torch.from_numpy(point[row_idx,:3])  	## need to revise
         origin = origin[row_idx]
         label = label[row_idx]			## need to revise
-        target = torch.zeros((self.num_point,2))
+        target = torch.zeros((self.num_point,3))
         # #target = torch.zeros((self.num_point), dtype = torch.long)
+
+
         for i in range(self.num_point):
-            #print label[i]
-            #target[i] = int(label[i])
             target[i][int(label[i])] = 1
         point_out = np.transpose(point_out, (1, 0))
 
@@ -259,7 +260,7 @@ class clsSeg_Dataset(torch.utils.data.Dataset):
         loop_count = 0
         gt_copy = copy.copy(gt)
         
-        if np.random.random_integers(0, 4, 1) == 1:
+        if np.random.random_integers(0, 4, 1) == 0:
             while True:
                 gt = copy.copy(gt_copy)
                 loop_count += 1

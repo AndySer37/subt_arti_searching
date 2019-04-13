@@ -11,15 +11,15 @@ import numpy as np
 import matplotlib
 
 
-lr_steps = [25, 38, 51]
+lr_steps = [30, 55, 70, 90]
 gamma = 0.1
 step_index = 0
 
-num_epochs = 60
-batch_size = 10
+num_epochs = 120
+batch_size = 15
 learning_rate = 0.001
 num_points = 10000
-network = PointNetDenseCls(k = 2)  #(num_points = num_points)
+network = PointNetDenseCls(k = 3)  #(num_points = num_points)
 #network = InstanceSeg(num_points = num_points)
 network = network.cuda()
 
@@ -65,7 +65,7 @@ for epoch in range(num_epochs):
         loss.backward()
         optimizer.step()
     if epoch != 0 and epoch % 5 == 0:
-        model_path = "./weights/pointnet_new_epoch_" + str(epoch)
+        model_path = "./seg_weights/pointnet_seg_epoch_" + str(epoch)
         torch.save(network.state_dict(), model_path + '.pkl')
 
     if epoch in lr_steps:

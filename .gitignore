@@ -1,4 +1,5 @@
 *.pcd
+*.pth
 *.jpg
 *.png
 build/

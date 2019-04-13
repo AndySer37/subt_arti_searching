@@ -20,7 +20,7 @@ else:
     import xml.etree.ElementTree as ET
 
 subt_CLASSES =  [  # always index 0
-    'bb_extinguisher', 'bb_drill']
+    'bb_extinguisher', 'bb_drill', 'bb_backpack']
 
 # note: if you used our download scripts, this should be right
 subt_ROOT = osp.join(HOME, "data/subt_real/")

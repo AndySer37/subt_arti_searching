@@ -15,7 +15,7 @@ num_epochs = 10
 batch_size = 1
 learning_rate = 0.001
 num_points = 8000
-network = PointNetDenseCls(k = 2)  #(num_points = num_points)
+network = PointNetDenseCls(k = 3)  #(num_points = num_points)
 #network = InstanceSeg(num_points = num_points)
 network = network.cuda()
 
@@ -25,7 +25,7 @@ test_loader = torch.utils.data.DataLoader(dataset=test_dataset,
                                            num_workers=16)
 
 
-state_dict = torch.load("./weights/pointnet_new_epoch_55.pkl")
+state_dict = torch.load("./seg_weights/pointnet_seg_epoch_115.pkl")
 network.load_state_dict(state_dict)
 dataiter = iter(test_loader)
 network.eval()
@@ -54,7 +54,7 @@ def prediction(dataiter, network):
         blue = float(origin[i][5] >> 0) 
         rgb = float(int(origin[i][5] << 16) | int(origin[i][4] << 8) | int(origin[i][3]))    
         #if output[i].argmax() == labels[i] and output[i].argmax() == 1:
-        if output[i].argmax() == labels[i].argmax() and output[i].argmax() == 1:
+        if output[i].argmax() == labels[i].argmax() and output[i].argmax() != 0:
         #if output[i][0] < -0.1:
             _point_list.append([inputs[0][0][i], inputs[0][1][i], inputs[0][2][i],rgb])
         else:

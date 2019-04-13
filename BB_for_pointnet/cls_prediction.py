@@ -15,8 +15,8 @@ import pcl
 num_epochs = 10
 batch_size = 1
 learning_rate = 0.001
-num_points = 5000
-network = PointNetCls(k = 2)  #(num_points = num_points)
+num_points = 8000
+network = PointNetCls(k = 3)  #(num_points = num_points)
 #network = InstanceSeg(num_points = num_points)
 network = network.cuda()
 
@@ -26,7 +26,7 @@ test_loader = torch.utils.data.DataLoader(dataset=test_dataset,
                                            num_workers=16)
 
 
-state_dict = torch.load("./weights/pointnet_cls_epoch_55.pkl")
+state_dict = torch.load("./cls_weights/pointnet_cls_epoch_115.pkl")
 network.load_state_dict(state_dict)
 dataiter = iter(test_loader)
 network.eval()
