@@ -33,13 +33,13 @@ class bb_pointnet(object):
 		self.cy = 247.670654296875
 
 		self.cv_bridge = CvBridge() 
-		self.num_points = 10000
+		self.num_points = 8000
 		
 		#self.network = InstanceSeg(num_points = self.num_points)
-		self.network = PointNetDenseCls(k = 2) 
+		self.network = PointNetDenseCls(k = 3) 
 		self.network = self.network.cuda()
-		model_dir = "/home/andyser/code/subt_related/subt_arti_searching/BB_for_pointnet/weights"
-		model_name = "pointnet_new_epoch_55.pkl"	
+		model_dir = "/home/andyser/code/subt_related/subt_arti_searching/BB_for_pointnet/seg_weights"
+		model_name = "pointnet_seg_epoch_115.pkl"	
 		state_dict = torch.load(os.path.join(model_dir, model_name))
 		self.network.load_state_dict(state_dict)
 		self.prediction = rospy.Publisher('/prediction', PointCloud2, queue_size=10)
@@ -82,11 +82,11 @@ class bb_pointnet(object):
 			b = (pack & 0x000000FF)
 			rgb = struct.unpack('I', struct.pack('BBBB', b, g, r, 255))[0] 
 			#if output[i].argmax() == labels[i] and output[i].argmax() == 1:
-			if output[i].argmax() == 1:
+			if output[i].argmax() != 0:
 			#if output[i][0] < -0.1:
 				_point_list.append([inputs[0][0][i], inputs[0][1][i], inputs[0][2][i],rgb])
 			_origin_list.append([inputs[0][0][i], inputs[0][1][i], inputs[0][2][i],rgb])
-
+		print len(_point_list), len(_origin_list)
 		header = Header()
 		header.stamp = rospy.Time.now()
 		header.frame_id ="camera_link"

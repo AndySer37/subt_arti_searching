@@ -26,7 +26,7 @@ import message_filters
 
 class bb_ssd_prediction(object):
 	def __init__(self):
-		self.prob_threshold = 0.1
+		self.prob_threshold = 0.7
 		self.cv_bridge = CvBridge() 
 		self.num_points = 8000
 		self.labels = ['background' , # always index 0
@@ -51,17 +51,16 @@ class bb_ssd_prediction(object):
 
 		### msg filter 
 
-		video_mode = True 
+		video_mode = False 
 		if video_mode:
 			image_sub = rospy.Subscriber('/camera/color/image_raw', Image, self.video_callback)
 		else:
-			image_sub = message_filters.Subscriber('/camera/color/image_rect_color', Image)
+			image_sub = message_filters.Subscriber('/camera/color/image_raw', Image)
 			depth_sub = message_filters.Subscriber('/camera/aligned_depth_to_color/image_raw', Image)
 			ts = message_filters.TimeSynchronizer([image_sub, depth_sub], 10)
 			ts.registerCallback(self.callback)
 
 	def callback(self, img_msg, depth):
-
 		try:
 			if self.is_compressed:
 				np_arr = np.fromstring(img_msg.data, np.uint8)
@@ -84,10 +83,10 @@ class bb_ssd_prediction(object):
 
 		for obj in obj_list:
 			out = bb_input()
-			# obj[0] = obj[0] - 30
-			# obj[1] = obj[1]	- 30
-			# obj[2] = obj[2] + 100
-			# obj[3] = obj[3] + 100
+			# obj[0] = obj[0] - 10
+			# obj[1] = obj[1] - 10
+			# obj[2] = obj[2] + 20
+			# obj[3] = obj[3] + 20
 
 			mask = np.zeros((rows, cols), dtype = np.uint8)
 			point_list = [(int(obj[0]), int(obj[1])),(int(obj[0] + obj[2]),int(obj[1])),\
