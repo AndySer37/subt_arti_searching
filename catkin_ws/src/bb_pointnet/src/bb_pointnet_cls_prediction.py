@@ -25,7 +25,7 @@ from bb_pointnet.srv import *
 class bb_pointnet(object):
 	def __init__(self):
 		self.subt_CLASSES =  [  # always index 0 
-				'background', 'bb_extinguisher', 'bb_drill']
+				'bb_extinguisher', 'bb_drill', 'bb_backpack']
 
 		self.fx = 618.2425537109375
 		self.fy = 618.5384521484375
@@ -33,13 +33,13 @@ class bb_pointnet(object):
 		self.cy = 247.670654296875
 
 		self.cv_bridge = CvBridge() 
-		self.num_points = 10000
+		self.num_points = 6000
 		
 		#self.network = InstanceSeg(num_points = self.num_points)
-		self.network = PointNetCls(k = 3) 
+		self.network = PointNetCls(k = 3,feature_transform = True) 
 		self.network = self.network.cuda()
 		model_dir = "/home/andyser/code/subt_related/subt_arti_searching/BB_for_pointnet/cls_weights"
-		model_name = "pointnet_cls_epoch_95.pkl"	
+		model_name = "pointnet_cls_epoch_14.pkl"	
 		state_dict = torch.load(os.path.join(model_dir, model_name))
 		self.network.load_state_dict(state_dict)
 
@@ -61,7 +61,13 @@ class bb_pointnet(object):
 		else:
 			row_idx = np.random.choice(point.shape[0], self.num_points, replace=False)	
 
-		point_in = torch.from_numpy(point[row_idx])  	## need to revise
+		point = point[row_idx,:3]
+
+		point = point - np.expand_dims(np.mean(point, axis = 0), 0) # center
+		dist = np.max(np.sqrt(np.sum(point ** 2, axis = 1)),0)
+		point = point / dist #scale
+
+		point_in = torch.from_numpy(point)  	## need to revise
 		color_list = color_list[row_idx]
 
 		point_in = np.transpose(point_in, (1, 0))

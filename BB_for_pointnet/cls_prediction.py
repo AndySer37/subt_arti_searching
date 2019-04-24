@@ -26,7 +26,7 @@ test_loader = torch.utils.data.DataLoader(dataset=test_dataset,
                                            num_workers=16)
 
 
-state_dict = torch.load("./cls_weights/pointnet_cls_epoch_115.pkl")
+state_dict = torch.load("./cls_weights/pointnet_cls_epoch_28.pkl")
 network.load_state_dict(state_dict)
 dataiter = iter(test_loader)
 network.eval()

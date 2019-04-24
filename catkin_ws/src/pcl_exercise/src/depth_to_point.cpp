@@ -48,10 +48,16 @@ void depth_to_point::callback(const bb_pointnet::bb_input msg){
     toROSMsg(*pc, object_cloud_msg);
     bb_pointnet::pointnet_prediction srv;
     srv.request.input_pc = object_cloud_msg;
-    if (ros::Time::now().toSec() - time > 1){
-    	time = ros::Time::now().toSec();
-    	client.call(srv);
-    	cout << "Pointnet processing time: " << ros::Time::now().toSec() - time << endl;
+    if (ros::Time::now().toSec() - time1 > 2){
+    	time1 = ros::Time::now().toSec();
+    	client_cls.call(srv);
+    	cout << "Pointnet_cls processing time: " << ros::Time::now().toSec() - time1 << endl;
+    	cout << srv.response.info << endl;
+    }
+    if (ros::Time::now().toSec() - time2 > 1){
+    	time2 = ros::Time::now().toSec();
+    	client_seg.call(srv);
+    	cout << "Pointnet_seg processing time: " << ros::Time::now().toSec() - time2 << endl;
     	cout << srv.response.info << endl;
     }
     object_cloud_msg.header.frame_id = "camera_link";
@@ -60,10 +66,12 @@ void depth_to_point::callback(const bb_pointnet::bb_input msg){
 }
 depth_to_point::depth_to_point(){
 	NodeHandle nh;
-	time = ros::Time::now().toSec();
+	time1 = ros::Time::now().toSec();
+	time2 = ros::Time::now().toSec();
 	pc_pub_bbox = nh.advertise<sensor_msgs::PointCloud2> ("/box_pointcloud", 10);
 	ssd_result = nh.subscribe<bb_pointnet::bb_input>("/bbox", 1, &depth_to_point::callback,this); 
-	client = nh.serviceClient<bb_pointnet::pointnet_prediction>("/pointnet_cls_prediction");
+	client_cls = nh.serviceClient<bb_pointnet::pointnet_prediction>("/pointnet_cls_prediction");
+	client_seg = nh.serviceClient<bb_pointnet::pointnet_prediction>("/pointnet_prediction");
 }
 void depth_to_point::get_msg(){
 	sensor_msgs::CameraInfo::ConstPtr msg = ros::topic::waitForMessage<sensor_msgs::CameraInfo>("/camera/color/camera_info",ros::Duration());

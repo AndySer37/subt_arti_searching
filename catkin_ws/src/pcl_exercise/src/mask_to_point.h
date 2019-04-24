@@ -29,24 +29,23 @@ using namespace cv;
 using namespace pcl;
 using namespace message_filters;
 
-class depth_to_point{
+static int colormap[5][3] = {{0,0,0}, {255,0,0}, {0,255,0}, {0,0,255}, {0,255,255}};
+class mask_to_point{
   public:
-    depth_to_point();
+    mask_to_point();
     void get_msg();
     void callback(const bb_pointnet::bb_input);
     void getXYZ(float* , float* ,float );
   private:
   	Publisher pc_pub_bbox;
   	ros::Subscriber ssd_result;
-    ros::ServiceClient client_cls;
-    ros::ServiceClient client_seg;
+
     PointCloud<PointXYZRGB>::Ptr pc;
   	float fx;
   	float fy;
   	float cx;
   	float cy;
-    double time1;
-    double time2;
+
 
   	float Projection[3][4];
   	float extrinsics[3][4];

@@ -15,7 +15,7 @@ if sys.version_info[0] == 2:
 else:
     import xml.etree.ElementTree as ET
 subt_CLASSES =  [  # always index 0
-    'bb_extinguisher','bb_drill']
+    'bb_extinguisher', 'bb_drill', 'bb_backpack']
 HOME = osp.expanduser("~")
 # note: if you used our download scripts, this should be right
 subt_ROOT = osp.join(HOME, "data/subt_real/")
@@ -114,8 +114,8 @@ class InstanceSeg_Dataset(torch.utils.data.Dataset):
     def __getitem__(self, index):
         
         im, mask, depth, gt, h, w, img_id = self.pull_item(index)
-        lower_bound = -5
-        upper_bound = 15
+        lower_bound = 5
+        upper_bound = 20
         
         gt = gt[0]
         x_bb = gt[3] - gt[1]
@@ -142,7 +142,7 @@ class InstanceSeg_Dataset(torch.utils.data.Dataset):
                         point.append([z,-y,-x])
                         (r,g,b) = im[i,j]
                         origin.append([z,-y,-x,r,g,b])
-                        label.append([mask[i,j]/255 * _cls])
+                        label.append([mask[i,j]/255])     # * _cls])
         point = np.asarray(point, dtype = np.float32)
         label = np.asarray(label, dtype = np.float32)
         origin = np.asarray(origin, dtype = np.float32)
@@ -153,11 +153,16 @@ class InstanceSeg_Dataset(torch.utils.data.Dataset):
         else:
             row_idx = np.random.choice(point.shape[0], self.num_point, replace=False)        
 
+        point = point[row_idx,:3]
 
-        point_out = torch.from_numpy(point[row_idx,:3])  	## need to revise
+        point = point - np.expand_dims(np.mean(point, axis = 0), 0) # center
+        dist = np.max(np.sqrt(np.sum(point ** 2, axis = 1)),0)
+        point = point / dist #scale
+
+        point_out = torch.from_numpy(point)     ## need to revise
         origin = origin[row_idx]
         label = label[row_idx]			## need to revise
-        target = torch.zeros((self.num_point,3))
+        target = torch.zeros((self.num_point, 2))
         # #target = torch.zeros((self.num_point), dtype = torch.long)
 
 
@@ -237,15 +242,17 @@ class clsSeg_Dataset(torch.utils.data.Dataset):
     def __getitem__(self, index):
         
         im, mask, depth, gt, h, w, img_id = self.pull_item(index)
-        lower_bound = 15
-        upper_bound = 25
+        lower_bound = 10
+        upper_bound = 20
         try:
             gt = gt[0]
         except:
-            print self.ids[index][1]
+            print "111",self.ids[index][1]
+
         x_bb = gt[3] - gt[1]
         y_bb = gt[2] - gt[0]
         _min = min(x_bb, y_bb)
+
         if _min < 5:
             lower_bound = 0
         bonus = np.random.random_integers(lower_bound, upper_bound, 1)
@@ -260,29 +267,30 @@ class clsSeg_Dataset(torch.utils.data.Dataset):
         loop_count = 0
         gt_copy = copy.copy(gt)
         
-        if np.random.random_integers(0, 4, 1) == 0:
-            while True:
-                gt = copy.copy(gt_copy)
-                loop_count += 1
-                ram = np.random.random_integers(0, 1, 1)
-                if loop_count > 10:
-                    gt = copy.copy(gt_copy)
-                    break
-                if ram == 0:
-                    gt[0] = gt[0] - y_bb - 20
-                    gt[2] = gt[2] - y_bb - 10
-                elif ram == 1:
-                    gt[0] = gt[0] + y_bb + 10 
-                    gt[2] = gt[2] + y_bb + 20
+        # if np.random.random_integers(0, 4, 1) == 0:
+        #     while True:
+        #         gt = copy.copy(gt_copy)
+        #         loop_count += 1
+        #         ram = np.random.random_integers(0, 1, 1)
+        #         if loop_count > 10:
+        #             gt = copy.copy(gt_copy)
+        #             break
+        #         if ram == 0:
+        #             gt[0] = gt[0] - y_bb - 20
+        #             gt[2] = gt[2] - y_bb - 10
+        #         elif ram == 1:
+        #             gt[0] = gt[0] + y_bb + 10 
+        #             gt[2] = gt[2] + y_bb + 20
 
-                if 600 > gt[2] > 50  and 600 > gt[0] > 50:
-                    _is = False
-                    break
+        #         if 600 > gt[2] > 50  and 600 > gt[0] > 50:
+        #             _is = False
+        #             break
         
         for i in range(h):
             for j in range(w):
                 if gt[0] - bonus <= j <= gt[2] + bonus and gt[1] - bonus <= i <= gt[3] + bonus:
                     z = depth[i,j]
+
                     if z > 1:
                         x, y, z = self.getXYZ(j,i,z/1000.)
                         point.append([z,-y,-x])
@@ -291,10 +299,10 @@ class clsSeg_Dataset(torch.utils.data.Dataset):
         if _is:
             for i in range(len(subt_CLASSES)):
                 if subt_CLASSES[i][3:] in self.ids[index][1]:
-                    label.append(i+1)
-                    #print self.ids[index][1], i+1 
-        else:
-            label.append(0)
+                    #label.append(i+1)
+                    label.append(i)
+        # else:
+        #     label.append(0)
 
         point = np.asarray(point, dtype = np.float32)
         label = np.asarray(label, dtype = np.float32)
@@ -306,10 +314,15 @@ class clsSeg_Dataset(torch.utils.data.Dataset):
         if point.shape[0] < self.num_point:
             row_idx = np.random.choice(point.shape[0], self.num_point, replace=True)
         else:
-            row_idx = np.random.choice(point.shape[0], self.num_point, replace=False)        
+            row_idx = np.random.choice(point.shape[0], self.num_point, replace=False)     
 
+        point = point[row_idx,:3]
 
-        point_out = torch.from_numpy(point[row_idx,:3])     ## need to revise
+        point = point - np.expand_dims(np.mean(point, axis = 0), 0) # center
+        dist = np.max(np.sqrt(np.sum(point ** 2, axis = 1)),0)
+        point = point / dist #scale
+
+        point_out = torch.from_numpy(point)     ## need to revise
         origin = origin[row_idx]
 
         target = torch.from_numpy(label).type(torch.LongTensor)

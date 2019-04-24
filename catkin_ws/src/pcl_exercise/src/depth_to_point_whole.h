@@ -29,24 +29,28 @@ using namespace cv;
 using namespace pcl;
 using namespace message_filters;
 
-class depth_to_point{
+class depth_to_point_whole{
   public:
-    depth_to_point();
+    depth_to_point_whole();
     void get_msg();
-    void callback(const bb_pointnet::bb_input);
+    void callback(const sensor_msgs::ImageConstPtr&,const sensor_msgs::ImageConstPtr&); 
     void getXYZ(float* , float* ,float );
   private:
   	Publisher pc_pub_bbox;
   	ros::Subscriber ssd_result;
-    ros::ServiceClient client_cls;
-    ros::ServiceClient client_seg;
+    ros::ServiceClient client;
     PointCloud<PointXYZRGB>::Ptr pc;
   	float fx;
   	float fy;
   	float cx;
   	float cy;
-    double time1;
-    double time2;
+    double time;
+    message_filters::Subscriber<sensor_msgs::Image> img_sub;
+    message_filters::Subscriber<sensor_msgs::Image> depth_sub;
+    typedef message_filters::sync_policies::ApproximateTime<sensor_msgs::Image, sensor_msgs::Image> MySyncPolicy;
+    typedef message_filters::Synchronizer<MySyncPolicy> Sync;
+    boost::shared_ptr<Sync> sync_;
+
 
   	float Projection[3][4];
   	float extrinsics[3][4];

@@ -26,7 +26,7 @@ import message_filters
 
 class bb_ssd_prediction(object):
 	def __init__(self):
-		self.prob_threshold = 0.7
+		self.prob_threshold = 0.60
 		self.cv_bridge = CvBridge() 
 		self.num_points = 8000
 		self.labels = ['background' , # always index 0
@@ -41,7 +41,7 @@ class bb_ssd_prediction(object):
 		if self.cuda_use:
 			self.network = self.network.cuda()
 		model_dir = "/home/andyser/code/subt_related/subt_arti_searching/ssd/weights"
-		model_name = "ssd300_subt_110000.pth"	
+		model_name = "ssd300_subt_280000.pth"
 		state_dict = torch.load(os.path.join(model_dir, model_name))
 		self.network.load_state_dict(state_dict)
 		#### Publisher
@@ -83,10 +83,10 @@ class bb_ssd_prediction(object):
 
 		for obj in obj_list:
 			out = bb_input()
-			# obj[0] = obj[0] - 10
-			# obj[1] = obj[1] - 10
-			# obj[2] = obj[2] + 20
-			# obj[3] = obj[3] + 20
+			obj[0] = obj[0] - 5
+			obj[1] = obj[1] - 5
+			obj[2] = obj[2] + 10
+			obj[3] = obj[3] + 10
 
 			mask = np.zeros((rows, cols), dtype = np.uint8)
 			point_list = [(int(obj[0]), int(obj[1])),(int(obj[0] + obj[2]),int(obj[1])),\
@@ -150,7 +150,9 @@ class bb_ssd_prediction(object):
 		xx = Variable(x.unsqueeze(0))     # wrap tensor in Variable
 		if self.cuda_use:
 			xx = xx.cuda()
+		time = rospy.get_time()
 		y = self.network(xx)
+		print(1./(rospy.get_time()- time))
 		scale = torch.Tensor(img.shape[1::-1]).repeat(2)
 		detections = y.data	# torch.Size([1, 4, 200, 5]) --> [batch?, class, object, coordinates]
 		objs = []
@@ -162,11 +164,11 @@ class bb_ssd_prediction(object):
 					objs.append([pt[0], pt[1], pt[2]-pt[0]+1, pt[3]-pt[1]+1, i])
 
 		for obj in objs:
-			if obj[4] == 0:
+			if obj[4] == 1:
 				color = (0, 255, 255)
-			elif obj[4] == 1:
-				color = (255, 255, 0)
 			elif obj[4] == 2:
+				color = (255, 255, 0)
+			elif obj[4] == 3:
 				color = (255, 0, 255)
 			else:
 				color = (0, 0, 0)

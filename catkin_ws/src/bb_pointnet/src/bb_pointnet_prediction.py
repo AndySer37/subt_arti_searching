@@ -24,8 +24,6 @@ from bb_pointnet.srv import *
 
 class bb_pointnet(object):
 	def __init__(self):
-		self.subt_CLASSES =  [  # always index 0
-				'bb_extinguisher', 'bb_drill']
 
 		self.fx = 618.2425537109375
 		self.fy = 618.5384521484375
@@ -33,13 +31,13 @@ class bb_pointnet(object):
 		self.cy = 247.670654296875
 
 		self.cv_bridge = CvBridge() 
-		self.num_points = 8000
+		self.num_points = 1500
 		
 		#self.network = InstanceSeg(num_points = self.num_points)
-		self.network = PointNetDenseCls(k = 3) 
+		self.network = PointNetDenseCls(k = 2, feature_transform = True) 
 		self.network = self.network.cuda()
 		model_dir = "/home/andyser/code/subt_related/subt_arti_searching/BB_for_pointnet/seg_weights"
-		model_name = "pointnet_seg_epoch_115.pkl"	
+		model_name = "pointnet_seg_epoch_75.pkl"	
 		state_dict = torch.load(os.path.join(model_dir, model_name))
 		self.network.load_state_dict(state_dict)
 		self.prediction = rospy.Publisher('/prediction', PointCloud2, queue_size=10)
@@ -62,9 +60,15 @@ class bb_pointnet(object):
 		else:
 			row_idx = np.random.choice(point.shape[0], self.num_points, replace=False)	
 
-		point_in = torch.from_numpy(point[row_idx])  	## need to revise
+		point = point[row_idx,:3]
+		ori = point.copy()
+
+		point = point - np.expand_dims(np.mean(point, axis = 0), 0) # center
+		dist = np.max(np.sqrt(np.sum(point ** 2, axis = 1)),0)
+		point = point / dist #scale
 		color_list = color_list[row_idx]
 
+		point_in = torch.from_numpy(point)
 		point_in = np.transpose(point_in, (1, 0))
 		point_in = point_in[np.newaxis,:]
 
@@ -77,15 +81,16 @@ class bb_pointnet(object):
 			s = struct.pack('>f' ,color_list[i])
 			k = struct.unpack('>l',s)[0]
 			pack = ctypes.c_uint32(k).value
-			r = (pack & 0x00FF0000)>> 16
-			g = (pack & 0x0000FF00)>> 8
-			b = (pack & 0x000000FF)
+			r = 0	#(pack & 0x00FF0000)>> 16
+			g = 255	#(pack & 0x0000FF00)>> 8
+			b = 0	#(pack & 0x000000FF)
 			rgb = struct.unpack('I', struct.pack('BBBB', b, g, r, 255))[0] 
 			#if output[i].argmax() == labels[i] and output[i].argmax() == 1:
-			if output[i].argmax() != 0:
-			#if output[i][0] < -0.1:
-				_point_list.append([inputs[0][0][i], inputs[0][1][i], inputs[0][2][i],rgb])
-			_origin_list.append([inputs[0][0][i], inputs[0][1][i], inputs[0][2][i],rgb])
+			#if output[i].argmax() != 0:
+			if output[i][1] - output[i][0] > 1.5:  	# 2.5
+				#_point_list.append([inputs[0][0][i], inputs[0][1][i], inputs[0][2][i],rgb])
+				_point_list.append([ori[i][0], ori[i][1], ori[i][2],rgb])
+			_origin_list.append([ori[i][0], ori[i][1], ori[i][2],rgb])
 		print len(_point_list), len(_origin_list)
 		header = Header()
 		header.stamp = rospy.Time.now()

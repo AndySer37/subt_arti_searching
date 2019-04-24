@@ -11,22 +11,22 @@ import numpy as np
 import matplotlib
 
 
-lr_steps = [30, 55, 70, 90]
+lr_steps = [25, 45, 60, 70]
 gamma = 0.1
 step_index = 0
-
-num_epochs = 120
+num_workers = 8
+num_epochs = 91
 batch_size = 15
 learning_rate = 0.001
-num_points = 10000
-network = PointNetDenseCls(k = 3)  #(num_points = num_points)
+num_points = 8000
+network = PointNetDenseCls(k = 2, feature_transform = True)  #(num_points = num_points)
 #network = InstanceSeg(num_points = num_points)
 network = network.cuda()
 
 train_dataset = InstanceSeg_Dataset(data_path="/home/andyser/data/subt_real",num_point = num_points)
 train_loader = torch.utils.data.DataLoader(dataset=train_dataset,
                                            batch_size=batch_size, shuffle=True,
-                                           num_workers=16)
+                                           num_workers=num_workers)
 iteration = 0
 
 regression_loss_func = nn.SmoothL1Loss()
@@ -61,7 +61,8 @@ for epoch in range(num_epochs):
         #print outputs.shape, labels.shape
         loss = F.nll_loss(outputs, labels)
         '''
-        print (loss.data)
+        for param_group in optimizer.param_groups:
+            print "lr: ", param_group['lr'], "/ loss: ", loss.data
         loss.backward()
         optimizer.step()
     if epoch != 0 and epoch % 5 == 0:
