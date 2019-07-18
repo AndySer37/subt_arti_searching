@@ -26,11 +26,12 @@ import message_filters
 
 class bb_ssd_prediction(object):
 	def __init__(self):
-		self.prob_threshold = 0.60
+		self.prob_threshold = 0.90
 		self.cv_bridge = CvBridge() 
 		self.num_points = 8000
-		self.labels = ['background' , # always index 0
-				'bb_extinguisher','bb_drill','bb_backpack']
+		# self.labels = ['background' , # always index 0
+		# 		'bb_extinguisher','bb_drill','bb_backpack']
+		self.labels = ['background', 'person', 'palm', 'finger_one', 'finger_two', 'finger_three']
 		self.objects = []
 		self.network = build_ssd('test', 300, len(self.labels)) 
 		self.is_compressed = False
@@ -40,8 +41,10 @@ class bb_ssd_prediction(object):
 
 		if self.cuda_use:
 			self.network = self.network.cuda()
-		model_dir = "/home/andyser/code/subt_related/subt_arti_searching/ssd/weights"
-		model_name = "ssd300_subt_280000.pth"
+		# model_dir = "/home/andyser/code/subt_related/subt_arti_searching/ssd/weights"
+		# model_name = "ssd300_subt_280000.pth"
+		model_dir = "/home/andyser/code/exercise_ML/ssd.pytorch/weights"
+		model_name = "vimo.pth"
 		state_dict = torch.load(os.path.join(model_dir, model_name))
 		self.network.load_state_dict(state_dict)
 		#### Publisher
