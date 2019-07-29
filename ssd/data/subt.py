@@ -20,10 +20,10 @@ else:
     import xml.etree.ElementTree as ET
 
 subt_CLASSES =  [  # always index 0
-    'bb_extinguisher', 'bb_drill', 'bb_backpack']
+    'bb_backpack', 'bb_drill', 'bb_extinguisher', 'bb_man', 'bb_phone']
 
 # note: if you used our download scripts, this should be right
-subt_ROOT = osp.join(HOME, "data/subt_real/")
+subt_ROOT = osp.join(HOME, "data/subt_5_artifact/")
 
 
 class subtAnnotationTransform(object):
@@ -108,7 +108,7 @@ class subtDetection(data.Dataset):
 
 
     def __init__(self, root,
-                 image_sets=[('train')],
+                 image_sets=[('trainval')],
                  transform=None, target_transform=subtAnnotationTransform(),
                  dataset_name='subtreal'):
         self.root = root
@@ -126,10 +126,9 @@ class subtDetection(data.Dataset):
         print ("len: ", len(self.ids))
 
     def __getitem__(self, index):
-        try:
-            im, gt, h, w = self.pull_item(index)
-        except:
-            print(self.ids[index])
+        im, gt, h, w = self.pull_item(index)
+        # print(self.ids[index])
+
         return im, gt
 
     def __len__(self):
@@ -139,7 +138,10 @@ class subtDetection(data.Dataset):
         img_id = self.ids[index]
 
         target = ET.parse(self._annopath % img_id).getroot()
-        img = cv2.imread(self._imgpath % img_id)
+        str_ = self._imgpath % img_id
+        str_ = str_[:40] + str_[40:].replace('_', '/')
+        # img = cv2.imread(self._imgpath % img_id)
+        img = cv2.imread(str_)
         height, width, channels = img.shape
 
         if self.target_transform is not None:
