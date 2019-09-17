@@ -23,7 +23,7 @@ subt_CLASSES =  [  # always index 0
     'bb_backpack', 'bb_drill', 'bb_extinguisher', 'bb_man', 'bb_phone']
 
 # note: if you used our download scripts, this should be right
-subt_ROOT = osp.join(HOME, "data/subt_5_artifact/")
+subt_ROOT = osp.join(HOME, "data/subt_real_new/")
 
 
 class subtAnnotationTransform(object):
@@ -144,6 +144,7 @@ class subtDetection(data.Dataset):
         img = cv2.imread(str_)
         height, width, channels = img.shape
 
+
         if self.target_transform is not None:
             target = self.target_transform(target, width, height)
 
@@ -169,8 +170,11 @@ class subtDetection(data.Dataset):
             PIL img
         '''
         img_id = self.ids[index]
-
+        str_ = self._imgpath % img_id
+        str_ = str_[:40] + str_[40:].replace('_', '/')
         return cv2.imread(self._imgpath % img_id, cv2.IMREAD_COLOR)
+        #print (str_)
+        #return cv2.imread(str_, cv2.IMREAD_COLOR)
 
     def pull_anno(self, index):
         '''Returns the original annotation of image at index
