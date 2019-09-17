@@ -1,5 +1,6 @@
 from .miniwamv import wamvDetection, wamvAnnotationTransform, wamv_CLASSES, wamv_ROOT
 from .subt import subtDetection, subtAnnotationTransform, subt_CLASSES, subt_ROOT
+from .mm_barcode import mm_bar_Detection, mm_bar_AnnotationTransform, mm_bar_CLASSES, mm_bar_ROOT
 from .config import *
 import torch
 import cv2
